@@ -5,4 +5,4 @@
 # Ignore build directories
 .DS_Store
 .vscode
-anomaly-llm-faiss/llmmodels/gpt2/model.safetensors
+*./anomaly-llm-faiss/llmmodels/gpt2/model.safetensors
