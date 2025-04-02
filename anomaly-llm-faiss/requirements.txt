@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+redis
+kubernetes
+sentence-transformers
+transformers
+langchain
+langchain-community
+faiss-cpu
+openshift==0.13.1
+python-dotenv
+tiktoken
+#email-validator
+openai
+kubernetes
