@@ -5,3 +5,4 @@
 # Ignore build directories
 .DS_Store
 .vscode
+llmmodels/gpt2/model.safetensors
