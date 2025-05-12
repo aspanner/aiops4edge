@@ -4,7 +4,7 @@ anomaly-detection:
   env:
     REDIS_HOST: redis
     REDIS_PORT: 6379
-    PROCESS_ANOMALY_URL: http://anomaly-llm:8001
+    PROCESS_ANOMALY_URL: http://anomaly-llm:8001/process-anomaly
 
 anomaly-llm:
   service:
