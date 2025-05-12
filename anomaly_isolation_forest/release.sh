@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Log in (make sure to secure your credentials in CI secrets)
-docker login quay.io -u 'jpaulraj_se_jboss' -p 'Redhat2024$'
+docker login quay.io -u '' -p ''
 
 # Define your image base and version
 IMAGE=quay.io/zagaos/anomaly-isolation-forest
