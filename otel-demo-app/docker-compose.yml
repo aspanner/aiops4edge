@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: anomaly-demo
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=anomaly-detection
+      - OTEL_METRIC_EXPORTER=otlp
+
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - otel-collector
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - anomaly-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: anomaly-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - anomaly-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"  # OTLP/gRPC
+      - "4318:4318"  # OTLP/HTTP
+      - "55681:55681" # OpenCensus (optional)
+    command:
+      ["--config=/etc/otelcol-contrib/config.yaml"]
+    networks:
+      - anomaly-network
+
+volumes:
+  redis_data:
+
+networks:
+  anomaly-network:
+    driver: bridge

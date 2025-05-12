@@ -1,0 +1,4 @@
+apiVersion: v2
+name: anomaly-detection
+version: 0.1.0
+description: Anomaly Detection service

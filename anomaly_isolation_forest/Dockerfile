@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     build-essential \
     && apt-get clean \
+    && apt-get install -y wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirement files and install dependencies
@@ -18,9 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application
 COPY . .
-# COPY ./app/ .
-
-# COPY ./models/ ./models/
+# COPY app/ ./app/
 
 # Set PYTHONPATH to ensure 'app' is recognized
 ENV PYTHONPATH=/app

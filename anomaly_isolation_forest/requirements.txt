@@ -10,3 +10,12 @@ pandas
 apscheduler
 httpx
 asyncio
+
+
+
+# fastapi
+# uvicorn
+# scikit-learn
+# pandas
+# numpy
+# joblib

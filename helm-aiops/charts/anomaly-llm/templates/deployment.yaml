@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anomaly-llm-faiss
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: anomaly-llm
+  template:
+    metadata:
+      labels:
+        app: anomaly-llm
+    spec:
+      containers:
+        - name: anomaly-llm
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: REDIS_HOST
+              value: {{ .Values.env.REDIS_HOST | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.env.REDIS_PORT | quote }}
+            - name: CASE_MGT_URL
+              value: {{ .Values.env.CASE_MGT_URL | quote }}
+            - name: OPENSHIFT_API_SERVER
+              value: {{ .Values.env.OPENSHIFT_API_SERVER | quote }}
+            - name: OPENSHIFT_TOKEN
+              value: {{ .Values.env.OPENSHIFT_TOKEN | quote }}

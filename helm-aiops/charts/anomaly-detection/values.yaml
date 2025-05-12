@@ -1,0 +1,9 @@
+replicaCount: 1
+image:
+  repository: anomaly-detection
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  port: 8000
+env:
+  PROCESS_ANOMALY_URL: "http://anomaly-llm:8001"

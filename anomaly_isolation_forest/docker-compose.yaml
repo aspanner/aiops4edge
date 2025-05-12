@@ -5,13 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: isolation-forest-app
+    container_name: anomaly-detection
     ports:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - PROCESS_ANOMALY_URL=http://fastapi-app:8001/process-anomaly
     volumes:
       - ${PWD}:/app
     depends_on:
@@ -22,13 +23,26 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis-cache
+    container_name: anomaly-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
         - anomaly-network
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   container_name: otel-collector
+  #   volumes:
+  #     - ./etc/otel/otel-config.yaml:/etc/otelcol-contrib/config.yaml
+  #   ports:
+  #     - "4317:4317"  # OTLP gRPC
+  #     - "4318:4318"  # OTLP HTTP
+  #     - "55681:55681" # OpenCensus (optional)
+  #   command:
+  #     ["--config=/etc/otelcol-contrib/config.yaml"]
+  #   networks:
+  #     - anomaly-network
 
 volumes:
   redis_data:

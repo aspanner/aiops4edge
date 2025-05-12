@@ -1,0 +1,13 @@
+apiVersion: v2
+name: aiops
+version: 0.1.0
+dependencies:
+- name: anomaly-detection
+  version: 0.1.0
+  repository: "file://charts/anomaly-detection"
+- name: fastapi-app
+  version: 0.1.0
+  repository: "file://charts/fastapi-app"
+- name: redis
+  version: 0.1.0
+  repository: "file://charts/redis"

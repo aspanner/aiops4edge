@@ -8,6 +8,43 @@ from app.utils import extract_features
 
 MODEL_PATH = "models/isolation_forest_model.joblib"
 
+
+def train_anomaly_model():
+
+    # Generate synthetic normal data
+    np.random.seed(42)
+    cpu_usage = np.random.normal(50, 10, 1000)         # Normal CPU usage pattern
+    memory_usage = np.random.normal(2048, 512, 1000)   # Normal memory usage pattern
+
+    # Generate anomaly data
+    cpu_anomalies = np.random.uniform(80, 100, 50)
+    memory_anomalies = np.random.uniform(4096, 8192, 50)
+
+    # Combine normal and anomalous data
+    cpu_usage = np.concatenate([cpu_usage, cpu_anomalies])
+    memory_usage = np.concatenate([memory_usage, memory_anomalies])
+
+    # Create a DataFrame
+    data = pd.DataFrame({
+        'cpu_usage': cpu_usage,
+        'memory_usage': memory_usage
+    })
+
+    # Prepare features
+    features = data[['cpu_usage', 'memory_usage']].values
+
+    # Train Isolation Forest
+    model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+    model.fit(features)
+
+    # Save the model
+    joblib.dump(model, MODEL_PATH)
+
+    print("Isolation Forest model trained and saved to model/isolation_forest_model.joblib")
+
+        
+
+
 # Function to train and save model
 def train_model():
     df = pd.DataFrame({
@@ -24,7 +61,7 @@ def load_model():
     try:
         model = joblib.load(MODEL_PATH)
     except FileNotFoundError:
-        train_model()
+        train_anomaly_model()
         model = joblib.load(MODEL_PATH)
     return model
 
@@ -53,15 +90,6 @@ def predict_bulk_anomalies(model, requests):
     results = []
     for req, pred in zip(requests, predictions):
         result = "Anomaly" if pred == -1 else "Normal"
-        # results.append({
-        #     "cluster_name": req.cluster_name,
-        #     "pod_name": req.pod_name,
-        #     "app_name": req.app_name,
-        #     "timestamp": req.timestamp,
-        #     "cpu_usage": req.cpu_usage,
-        #     "memory_usage": req.memory_usage,
-        #     "result": result
-        # })
         results.append({
             "cluster_name": req["cluster_name"],
             "pod_name": req["pod_name"],

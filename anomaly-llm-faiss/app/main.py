@@ -6,6 +6,7 @@ from app.services.rag_pipeline import analyze_anomaly_with_llm,get_vector_store
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
 
+import os
 
 from typing import Dict
 app = FastAPI()
@@ -21,8 +22,16 @@ async def process_anomaly(anomaly_data: dict ):
         pod_name = anomaly_data.get("pod_name", "unknown_pod")
         cluster_info = anomaly_data.get("cluster_info", "unknown_cluster")
         response = analyze_anomaly_with_llm(anomaly_data)
-        create_case(response)
-        scale_pod("observability-testcases", "order-srv-1", 2)
+        action_req = os.getenv("ACTION_REQ")
+        print("scale_pod--begin")
+
+        create_case(response,anomaly_data)
+        print("scale_pod--end")
+        if action_req == 'Y':
+            print("scale_pod")
+
+            scale_pod(response, app_name, 2)
+            
         return {"resolution": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
@@ -35,7 +44,7 @@ async def handle_anomaly(anomaly: AnomalyData):
 
     # Example: Scale pod if CPU anomaly is detected
     # if anomaly_dict.anomaly_type == "high_cpu_usage":
-    if anomaly_dict["anomaly_type"] == "high_cpu_usage":  # ✅ Correct
+    if anomaly_dict["anomaly_type"] == "high_cpu_usage":  
 
         namespace = "default"
         deployment_name = "my-app-deployment"

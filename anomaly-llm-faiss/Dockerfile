@@ -18,9 +18,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application
 COPY . .
-# COPY ./app/ .
-
-# COPY ./models/ ./models/
 
 # Set PYTHONPATH to ensure 'app' is recognized
 ENV PYTHONPATH=/app

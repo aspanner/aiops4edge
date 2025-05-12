@@ -1,0 +1,13 @@
+replicaCount: 1
+image:
+  repository: anomaly-llm
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  port: 8001
+env:
+  REDIS_HOST: ""
+  REDIS_PORT: ""
+  CASE_MGT_URL: ""
+  OPENSHIFT_API_SERVER: ""
+  OPENSHIFT_TOKEN: ""

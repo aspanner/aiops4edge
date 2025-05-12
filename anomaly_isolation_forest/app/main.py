@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,BackgroundTasks
 from app.schemas import AnomalyRequest, BulkAnomalyRequest
 from app.model import load_model, predict_anomaly, predict_bulk_anomalies
 from app.scripts.insert_redis_data import generate_random_data , insert_data_to_redis
@@ -13,7 +13,11 @@ from contextlib import asynccontextmanager
 import json
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
-import httpx
+# import httpx
+from httpx import AsyncClient,Timeout, ReadTimeout
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+
 import asyncio
 
 logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
@@ -24,6 +28,10 @@ ogger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI()
+
+PROCESS_URL = os.environ["PROCESS_ANOMALY_URL"]
+
+timeout = Timeout(connect=5.0, read=30.0, write=5.0, pool=5.0)
 
 # Create logs directory if it doesn't exist
 os.makedirs("logs", exist_ok=True)
@@ -43,6 +51,35 @@ redis_port = int(os.getenv("REDIS_PORT", 6379))
 # Connect to Redis
 # redis_client = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 redis_client = Redis(host=redis_host, port=redis_port, decode_responses=True)
+
+# MODEL_PATH = "model/isolation_forest_model.joblib"
+# training_in_progress = False
+PROCESS_URL = os.environ["PROCESS_ANOMALY_URL"]
+
+
+@app.post("/train_model")
+def start_training(background_tasks: BackgroundTasks):
+    global training_in_progress
+
+    if training_in_progress:
+        return {"status": "training already in progress"}
+
+    training_in_progress = True
+
+    def run_training():
+        global model, training_in_progress
+        try:
+            train_anomaly_model(MODEL_PATH)
+            model = joblib.load(MODEL_PATH)
+        finally:
+            training_in_progress = False
+
+    background_tasks.add_task(run_training)
+    return {"status": "training started"}
+
+@app.get("/training_status")
+def get_training_status():
+    return {"training": training_in_progress}
 
 
 # Health check endpoint
@@ -64,7 +101,7 @@ async def predict_bulk(requests: BulkAnomalyRequest):
     logger.info(f"Bulk anomaly prediction processed for {len(results)} entries.")
     return {"results": results}
 
-def process_redis_data() -> None:
+async def process_redis_data() -> None:
     anomaly_data = []
     # print(f"Periodic Task Triggered: {datetime.datetime.now()}")  # Add this line
 
@@ -102,8 +139,22 @@ def process_redis_data() -> None:
                     
 
         if results:
+            logger.info("entering into rpocess")
             tasks = [call_anomaly_api(data) for data in results]
-            asyncio.gather(*tasks)  # Run all API calls concurrently
+            # asyncio.gather(*tasks)  # Run all API calls concurrently
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            # for i, resp in enumerate(responses):
+            #     if isinstance(resp, Exception) or resp is None:
+            #         logger.error(f"Call failed for item {anomaly_data[i]}")
+            #     else:
+            #         logger.info(f"Call succeeded: {resp}")
+            for inp, out in zip(results, responses):
+                if isinstance(out, Exception):
+                    logger.error("Error for %s: %s", inp, out)
+                else:
+                    logger.info("Success for %s: %s", inp, out)
+
+
     else:
         logger.info("No new data to process from Redis.")
 
@@ -124,17 +175,34 @@ def generate_data(num_samples: int):
     insert_data_to_redis(data , redis_client)
     return data
 
-def call_anomaly_api(anomaly_data):
-    url = "http://fastapi-app:8001/process-anomaly" 
+async def call_anomaly_api(anomaly_data):
+    # url = os.environ["PROCESS_ANOMALY_URL"]
+    logger.info("call call_anomaly_api")
+    logger.info(f"call_anomaly_api: {PROCESS_URL}")
+
     try:
-         with httpx.Client() as client:
-            response =  client.post(url, json=anomaly_data)
+        #  async with httpx.Client() as client:
+        async with AsyncClient() as client:
+
+            # response =  client.post(PROCESS_URL, json=anomaly_data )
+            # response =  client.post(PROCESS_URL, json=anomaly_data , timeout=5.0)
+            response = await client.post(PROCESS_URL, json=anomaly_data, timeout=5.0)
+            response.raise_for_status()
+
             if response.status_code == 200:
+                logger.info(f"Anomaly processed: {response.json()}")
+
                 print(f"Anomaly processed: {response.json()}")
             else:
                 print(f"Error processing anomaly: {response.status_code}, {response.text}")
+    except ReadTimeout:
+        logger.error(f"ReadTimeout when calling {PROCESS_URL} for data {anomaly_data}")
     except Exception as e:
-        print(f"Failed to call anomaly API: {e}")
+        logger.error(f"Failed to call anomaly API at {PROCESS_URL}: {e}")
+    # except Exception as e:
+    #     print(f"Failed to call anomaly API: {e}")
+
+scheduler = AsyncIOScheduler()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -142,9 +210,13 @@ def shutdown_event():
     
 @app.on_event("startup")
 def start_scheduler():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(process_redis_data, "interval", seconds=10)  # Runs every 5 minutes
+    # # scheduler = BackgroundScheduler()
+    # scheduler.add_job(process_redis_data, "interval", seconds=10)  # Runs every 5 minutes
+    # scheduler.start()
+    scheduler.add_job(process_redis_data, "interval", seconds=10)
     scheduler.start()
+    logger.info("Scheduler started")
+
     print("Scheduler started:", scheduler.running)
 # Test endpoint for validation
 @app.get("/test")

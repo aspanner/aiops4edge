@@ -1,0 +1,4 @@
+apiVersion: v2
+name: anomaly-llm
+version: 0.1.0
+description: FastAPI LLM service
