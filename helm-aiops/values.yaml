@@ -2,20 +2,23 @@ anomaly-detection:
   service:
     port: 8000
   env:
-    REDIS_HOST: redis
+    PROCESS_ANOMALY_URL: http://anomaly-llm.aiops.svc.cluster.local:8001/process-anomaly
+    REDIS_HOST: redis.aiops.svc.cluster.local
     REDIS_PORT: 6379
-    PROCESS_ANOMALY_URL: http://anomaly-llm:8001/process-anomaly
+    CHANNEL_NAME: observability_channel
+    REDIS_OBS_HOST: redis-service.observability-datamesh.svc.cluster.local
+    REDIS_OBS_PORT: 6379
 
 anomaly-llm:
   service:
     port: 8001
   env:
-    REDIS_HOST: redis
-    REDIS_PORT: 6379
-    CASE_MGT_URL:
+    CASE_MGT_URL: https://casemanage-dashboard.apps.sno.zagaopensource.com
+    ACTION_REQ: N
     OPENSHIFT_API_SERVER: https://<openshift api url>:6443
     OPENSHIFT_TOKEN: <token>
-    ACTION_REQ: N
+    HF_HOME: /mnt/hf_cache
+    TRANSFORMERS_CACHE: /mnt/hf_cache/transformers
 
 redis:
   service:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from app.models.models import AnomalyData
 from app.services.ocp_scaler import scale_pod,create_case
-from app.services.rag_pipeline import analyze_anomaly_with_llm,get_vector_store, vector_store
+from app.services.rag_pipeline import analyze_anomaly_with_llm,get_vector_store
 from datetime import datetime
 import os
 from typing import Dict
@@ -21,14 +21,6 @@ logger = logging.getLogger("apscheduler")
 logger = logging.getLogger(__name__)
 
 
-app.on_event("startup")
-async def startup_event():
-    get_vector_store()
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "vector_store_initialized": vector_store is not None}
-
 @app.get("/")
 async def root():
     return {"message": "Anomaly Detection Service is running"}
@@ -38,7 +30,6 @@ async def process_anomaly(anomaly_data: dict ):
         app_name = anomaly_data.get("app_name", "unknown_app")
         pod_name = anomaly_data.get("pod_name", "unknown_pod")
         cluster_info = anomaly_data.get("cluster_info", "unknown_cluster")
-        
         response = analyze_anomaly_with_llm(anomaly_data)
         action_req = os.getenv("ACTION_REQ")
         print("scale_pod--begin")

@@ -5,9 +5,9 @@ dependencies:
 - name: anomaly-detection
   version: 0.1.0
   repository: "file://charts/anomaly-detection"
-- name: fastapi-app
+- name: anomaly-llm
   version: 0.1.0
-  repository: "file://charts/fastapi-app"
+  repository: "file://charts/anomaly-llm"
 - name: redis
   version: 0.1.0
   repository: "file://charts/redis"

@@ -13,6 +13,8 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - PROCESS_ANOMALY_URL=http://fastapi-app:8001/process-anomaly
+      - REDIS_OBS_HOST=redis
+      - REDIS_OBS_PORT=6379
     volumes:
       - ${PWD}:/app
     depends_on:
@@ -30,6 +32,15 @@ services:
       - redis_data:/data
     networks:
         - anomaly-network
+  # redis-event:
+  #   image: redis:7-alpine
+  #   container_name: redis-event
+  #   ports:
+  #     - "6380:6379"
+  #   volumes:
+  #     - redis_event:/data
+  #   networks:
+  #       - anomaly-network
   # otel-collector:
   #   image: otel/opentelemetry-collector-contrib:latest
   #   container_name: otel-collector

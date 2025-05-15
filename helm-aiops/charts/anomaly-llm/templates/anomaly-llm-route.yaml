@@ -1,0 +1,13 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: anomaly-llm
+spec:
+  to:
+    kind: Service
+    name: anomaly-llm
+  port:
+    targetPort: {{ .Values.service.port  }}
+  tls:
+    insecureEdgeTerminationPolicy: Allow
+    termination: edge

@@ -89,14 +89,15 @@ def predict_bulk_anomalies(model, requests):
     predictions = model.predict(data)
     results = []
     for req, pred in zip(requests, predictions):
-        result = "Anomaly" if pred == -1 else "Normal"
-        results.append({
-            "cluster_name": req["cluster_name"],
-            "pod_name": req["pod_name"],
-            "app_name": req["app_name"],
-            "timestamp": req["timestamp"],
-            "cpu_usage": req["cpu_usage"],
-            "memory_usage": req["memory_usage"],
-            "is_anomaly": result
-        })
+        # result = "Anomaly" if pred == -1 else "Normal"
+        if pred == -1:  # Only add anomalies
+            results.append({
+                "cluster_name": req["cluster_name"],
+                "pod_name": req["pod_name"],
+                "app_name": req["app_name"],
+                "timestamp": req["timestamp"],
+                "cpu_usage": req["cpu_usage"],
+                "memory_usage": req["memory_usage"],
+                "is_anomaly": "Anomaly"
+            })
     return results

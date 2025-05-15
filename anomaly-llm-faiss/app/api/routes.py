@@ -1,6 +1,5 @@
 # FastAPI Routes for Anomaly Detection
 from fastapi import FastAPI,APIRouter, HTTPException
-# from app.services.rag_pipeline import analyze_anomaly_with_llm
 from app.services.ocp_scaler import scale_pod
 from app.models.models import AnomalyData
 

@@ -1,27 +1,28 @@
-from fastapi import FastAPI,BackgroundTasks # type: ignore
+from fastapi import FastAPI,BackgroundTasks
 from app.schemas import AnomalyRequest, BulkAnomalyRequest
 from app.model import load_model, predict_anomaly, predict_bulk_anomalies,train_anomaly_model
-from app.scripts.insert_redis_data import generate_random_data , insert_data_to_redis , insert_data_to_observability_event_redis ,generate_observability_event_data
-from redis import Redis # type: ignore
+from app.scripts.insert_redis_data import generate_random_data , insert_data_to_redis , generate_observability_event_data , insert_data_to_observability_event_redis
+from redis import Redis
 import redis.asyncio as aioredis
 import random
-import joblib
-
 
 # from fastapi_utils.tasks import repeat_every
 import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
+import joblib
 from datetime import datetime
 from contextlib import asynccontextmanager
 import json
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
+
 # import httpx
 from httpx import AsyncClient,Timeout, ReadTimeout
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from contextlib import asynccontextmanager
 
 import asyncio
 
@@ -30,8 +31,20 @@ logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
 logger = logging.getLogger("apscheduler")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(redis_subscriber())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
 # Initialize FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 PROCESS_URL = os.environ["PROCESS_ANOMALY_URL"]
 MODEL_PATH = "models/isolation_forest_model.joblib"
@@ -51,14 +64,11 @@ model = load_model()
 redis_host = os.getenv("REDIS_HOST", "redis")  # Use 'redis' as the default hostname
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 
-redis_obs_host = os.getenv("REDIS_OBS_HOST", "redis")  # Use 'redis' as the default hostname
-redis_obs_port = int(os.getenv("REDIS_OBS_PORT", 6379))
-
+# redis_obs_host = os.getenv("REDIS_OBS_HOST", "redis")  # Use 'redis' as the default hostname
+# redis_obs_port = int(os.getenv("REDIS_OBS_PORT", 6379))
 CHANNEL_NAME = os.getenv("CHANNEL_NAME", "observability_channel") 
-REDIS_URL = f"redis://{redis_obs_host}:{redis_obs_port}"
-redis_obs_client = None
+REDIS_URL = f"redis://{redis_host}:{redis_port}"
 
-subscriber_task = None
 
 
 # Connect to Redis
@@ -67,7 +77,6 @@ redis_client = Redis(host=redis_host, port=redis_port, decode_responses=True)
 # observability_redis_client = Redis(host=redis_obs_host, port=redis_obs_port, decode_responses=True)
 
 scheduler = AsyncIOScheduler()
-
 
 
 @app.post("/train_model")
@@ -152,11 +161,10 @@ async def process_redis_data() -> None:
                     
 
         if results:
-            logger.info("entering into rpocess")
+            logger.info("entering into process")
             tasks = [call_anomaly_api(data) for data in results]
-
+            # asyncio.gather(*tasks)  # Run all API calls concurrently
             responses = await asyncio.gather(*tasks, return_exceptions=True)
-            
             for inp, out in zip(results, responses):
                 if isinstance(out, Exception):
                     logger.error("Error for %s: %s", inp, out)
@@ -191,14 +199,15 @@ def generate_data(num_samples: int):
     insert_data_to_observability_event_redis(data , redis_client)
     return data
 
-
 async def call_anomaly_api(anomaly_data):
     logger.info("call call_anomaly_api")
     logger.info(f"call_anomaly_api: {PROCESS_URL}")
 
     try:
-        async with AsyncClient(timeout=Timeout(30.0))  as client:
-            response = await client.post(PROCESS_URL, json=anomaly_data)
+        #  async with httpx.Client() as client:
+        async with AsyncClient() as client:
+
+            response = await client.post(PROCESS_URL, json=anomaly_data, timeout=5.0)
             response.raise_for_status()
 
             if response.status_code == 200:
@@ -214,36 +223,63 @@ async def call_anomaly_api(anomaly_data):
     # except Exception as e:
     #     print(f"Failed to call anomaly API: {e}")
 
-scheduler = AsyncIOScheduler()
 
 @app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     scheduler.shutdown()
-    task = app.state.subscriber_task
-    if task:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            print("redis_subscriber task cancelled cleanly.")
     
 @app.on_event("startup")
 async def start_scheduler():
     
-    # asyncio.create_task(redis_subscriber())
-    app.state.subscriber_task = asyncio.create_task(redis_subscriber())
-
-    print("Redis subscriber started")
-
-    # Start your async job scheduler
+    
     scheduler.add_job(process_redis_data, "interval", seconds=5)
     scheduler.start()
+    logger.info("Scheduler started")
     print("Scheduler started:", scheduler.running)
+    
+    asyncio.create_task(redis_subscriber())
+    print("redis_subscriber started:")
 
 # Test endpoint for validation
 @app.get("/test")
 async def test():
     return {"message": "Test endpoint is working."}
+
+# async def consume_observability_event_redis():
+#     print("Redis consumer started")
+#     while True:
+#         try:
+#             item = await observability_redis_client.blpop("anomaly_queue")
+#             if item:
+#                 _, raw_data = item
+#                 try:
+#                     data = json.loads(raw_data)
+#                     anomaly_data =convert_to_anomaly_model_format(data)
+                    
+#                     results = await predict_bulk_anomalies(model, [anomaly_data])
+#                     anomaly = results[0]
+
+#                     if anomaly["is_anomaly"] == "Anomaly":
+#                         await redis_client.rpush("anomaly_results", json.dumps(anomaly))
+#                         print(f"Anomaly detected and pushed: {anomaly}")
+#                     else:
+#                         print(f"Normal data: {anomaly}")
+#                 except Exception as e:
+#                     print(f"Error processing item: {e}")
+#         except Exception as e:
+#             print(f"Redis connection error: {e}")
+#             await asyncio.sleep(5)  # Retry delay
+            
+def transform_to_anomaly_format(observability_event):
+    return {
+        "cluster_name": f"cluster_{random.randint(1, 10)}",
+        "pod_name": observability_event["servicename"],
+        "app_name": observability_event["servicename"],  # or derive differently if needed
+        "cpu_usage": round(float(observability_event["cpuusage"]), 2),
+        "memory_usage": round(float(observability_event["memoryusage"]), 2),
+        "timestamp": observability_event["createdtime"] if isinstance(source["createdtime"], str) else observability_event["createdtime"].isoformat()
+    }
+
 
 def convert_to_anomaly_model_format(observability_event: dict) -> dict:
     def safe_get(key, default=None):
@@ -273,11 +309,9 @@ def convert_to_anomaly_model_format(observability_event: dict) -> dict:
 
 
 async def redis_subscriber():
-    global redis_obs_client
-    redis_obs_client = await aioredis.from_url(REDIS_URL)
-
+    redis = await aioredis.from_url(REDIS_URL)
     try:
-        pubsub = redis_obs_client.pubsub()
+        pubsub = redis.pubsub()
         
         print(f" Recieved records from  Redis.{CHANNEL_NAME}")
 
@@ -295,9 +329,11 @@ async def redis_subscriber():
                         data = data.decode("utf-8")
 
                     event = json.loads(data)
+                    print("-----Received and converted event:------" , event)
 
                     formatted =   convert_to_anomaly_model_format(event)
                     anomaly = json.dumps(formatted)
+                    print("Received and converted event:", formatted)
                 
                     # Optional: push to another Redis queue
                     redis_client.rpush("anomaly_queue", anomaly)

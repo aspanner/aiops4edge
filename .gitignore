@@ -5,3 +5,4 @@
 # Ignore build directories
 .DS_Store
 .vscode
+/anomaly_isolation_forest/logs/

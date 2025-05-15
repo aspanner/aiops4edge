@@ -1,4 +1,4 @@
-from kubernetes import client, config
+from kubernetes import client
 import requests
 import os
 import uuid
@@ -60,18 +60,13 @@ def create_case(notes,anomaly_data):
     print(url)
 
     app_name = anomaly_data.get("app_name", "unknown_app")
-    print("--app_name")
 
     print(app_name)
-    print("app_name--")
-
-    print("---headers")
 
     headers = {
         "accept": "application/json",
         "Content-Type": "application/json"
     }
-    print("headers--")
 
     data = {
         "case_user_id": random_id,

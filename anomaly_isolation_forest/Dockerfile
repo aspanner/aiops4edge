@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application
 COPY . .
-# COPY app/ ./app/
+
+# RUN mkdir -p log && chmod 777 log
 
 # Set PYTHONPATH to ensure 'app' is recognized
 ENV PYTHONPATH=/app

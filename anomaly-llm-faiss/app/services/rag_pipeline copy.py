@@ -1,19 +1,11 @@
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import faiss
-
-# begin for refactor
-# from langchain.schema import Document
-# from langchain_community.vectorstores import FAISS
-# from langchain_community.docstore.in_memory import InMemoryDocstore
-# from langchain.embeddings import HuggingFaceEmbeddings
-# end for refactor
+from langchain.schema import Document
 
 
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.docstore.document import Document
-
+from langchain_community.vectorstores import FAISS
+from langchain_community.docstore.in_memory import InMemoryDocstore
 
 import os
 
@@ -24,12 +16,7 @@ os.environ["TRANSFORMERS_CACHE"] = "/tmp/huggingface/transformers"
 import numpy as np
 
 # Load local embedding model
-# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Initialize LLM model and tokenizer
 model_name = "gpt2"  # Replace with a more suitable model if needed
@@ -55,33 +42,23 @@ def get_vector_store():
             Document(page_content="network_latency", metadata={"anomaly": "Intermittent connectivity issues observed between services.", "resolution": "Verify network policies and firewall rules in OpenShift. Investigate DNS resolution delays using tools like 'nslookup' and ensure services are properly registered in the service mesh."}),
             Document(page_content="disk_pressure", metadata={"anomaly": "Free up disk space by clearing logs or unnecessary files. Monitor disk usage metrics and consider increasing storage allocation in the PersistentVolumeClaim (PVC). Optimize I/O-intensive applications to minimize disk write frequency."}),
         ]
-        # code refactoring begin 
-       
         # Embed the documents
-        # doc_texts = [doc.page_content for doc in documents]
-        # # embeddings = embedding_model.encode(doc_texts, convert_to_tensor=False)
-        # embeddings = embedding_model.encode(doc_texts, convert_to_tensor=False, show_progress_bar=False)
+        doc_texts = [doc.page_content for doc in documents]
+        embeddings = embedding_model.encode(doc_texts, convert_to_tensor=False)
 
+        # Initialize FAISS index
+        dimension = len(embeddings[0])
+        index = faiss.IndexFlatL2(dimension)
+        index.add(np.array(embeddings).astype('float32'))
 
-        # # Initialize FAISS index
-        # dimension = len(embeddings[0])
-        # index = faiss.IndexFlatL2(dimension)
-        # index.add(np.array(embeddings).astype('float32'))
-
-        # # Initialize FAISS vector store using LangChain
-        # docstore = InMemoryDocstore(dict(enumerate(documents)))
-        # vector_store = FAISS(
-        #     embedding_function=lambda text: embedding_model.encode([text])[0],
-        #     index=index,
-        #     docstore=docstore,
-        #     index_to_docstore_id={i: i for i in range(len(documents))}
-        # )
-        # code refactor end
-        #new start code 
-        # Create FAISS vector store
-        vector_store = FAISS.from_documents(documents, embedding_model)
-        
-        #new end code  
+        # Initialize FAISS vector store using LangChain
+        docstore = InMemoryDocstore(dict(enumerate(documents)))
+        vector_store = FAISS(
+            embedding_function=lambda text: embedding_model.encode([text])[0],
+            index=index,
+            docstore=docstore,
+            index_to_docstore_id={i: i for i in range(len(documents))}
+        )
     return vector_store
 
 
@@ -114,6 +91,7 @@ def analyze_anomaly_with_llm(anomaly_data):
             "Also, recommend scaling actions if necessary."
         )
         response = llm_pipeline(prompt, max_length=512, num_return_sequences=1,truncation=True)    # Mock LLM pipeline for testing
+        # generated_text = response[0]["generated_text"] if isinstance(response, list) else str(response)
         generated_text = response[0]["generated_text"]
     except Exception as e:
         print(f"Error in LLM pipeline: {e}")

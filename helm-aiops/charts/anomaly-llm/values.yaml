@@ -1,13 +1,13 @@
 replicaCount: 1
 image:
-  repository: anomaly-llm
+  repository: quay.io/zagaos/anomaly-llm-gpt2
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 service:
   port: 8001
 env:
-  REDIS_HOST: ""
-  REDIS_PORT: ""
-  CASE_MGT_URL: ""
-  OPENSHIFT_API_SERVER: ""
-  OPENSHIFT_TOKEN: ""
+  # REDIS_HOST: redis
+  # REDIS_PORT: 6379
+  # CASE_MGT_URL: ""
+  # OPENSHIFT_API_SERVER: ""
+  # OPENSHIFT_TOKEN: ""

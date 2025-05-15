@@ -1,9 +1,16 @@
 replicaCount: 1
 image:
-  repository: anomaly-detection
+  repository: quay.io/zagaos/anomaly-isolation-forest
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 service:
   port: 8000
 env:
-  PROCESS_ANOMALY_URL: "http://anomaly-llm:8001"
+  # PROCESS_ANOMALY_URL: "http://anomaly-llm:8001"
+  # REDIS_HOST: redis
+  # REDIS_PORT: 6379
+  # CASE_MGT_URL: https://casemanage-dashboard.apps.sno.zagaopensource.com
+  # OPENSHIFT_API_SERVER: https://<openshift api url>:6443
+  # OPENSHIFT_TOKEN: <token>
+  # ACTION_REQ: N
+  # CHANNEL_NAME: observability_channel
