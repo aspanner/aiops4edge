@@ -5,3 +5,12 @@ image:
   pullPolicy: IfNotPresent
 service:
   port: 6379
+persistence:
+  enabled: true
+  # storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 20Gi
+
+# auth:
+#   enabled: false
+#   password: "changeme"

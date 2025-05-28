@@ -18,3 +18,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          {% comment %} persistentVolumeClaim:
+            claimName: redis-pvc {% endcomment %}
+          emptyDir: {}
