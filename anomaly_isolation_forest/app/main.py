@@ -295,13 +295,27 @@ async def redis_subscriber():
                         data = data.decode("utf-8")
 
                     event = json.loads(data)
+                    
+                    event = json.loads(data)
+                    print(f"Received message: {event}")
 
-                    formatted =   convert_to_anomaly_model_format(event)
-                    anomaly = json.dumps(formatted)
+                    # Handle both single dict and list of dicts
+                    events = event if isinstance(event, list) else [event]
+
+                    # following code commented out to incorporate APM events
+                    # formatted =   convert_to_anomaly_model_format(event)
+                    # anomaly = json.dumps(formatted)
                 
                     # Optional: push to another Redis queue
-                    redis_client.rpush("anomaly_queue", anomaly)
-                    print(f"Inserted {anomaly} records into Redis.")
+                    # redis_client.rpush("anomaly_queue", anomaly)
+                    # print(f"Inserted {anomaly} records into Redis.")
+                    
+                    for single_event in events:
+                        formatted = convert_to_anomaly_model_format(single_event)
+                        anomaly = json.dumps(formatted)
+                        redis_client.rpush("anomaly_queue", anomaly)
+                        print(f"Inserted anomaly record into Redis: {anomaly}")
+
 
                 except json.JSONDecodeError:
                     # logger.error("Failed to decode JSON from message: %s", message["data"])

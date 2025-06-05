@@ -13,7 +13,8 @@ anomaly-llm:
   service:
     port: 8001
   env:
-    CASE_MGT_URL: https://casemanage-dashboard.apps.sno.zagaopensource.com
+    # CASE_MGT_URL: https://casemanage-dashboard.apps.sno.zagaopensource.com
+    CASE_MGT_URL: http://casemgt-backend-api.observability-casemanagement.svc.cluster.local:8000/api/v1/case/
     ACTION_REQ: N
     OPENSHIFT_API_SERVER: https://<openshift api url>:6443
     OPENSHIFT_TOKEN: <token>

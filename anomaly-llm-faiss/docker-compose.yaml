@@ -10,7 +10,8 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - CASE_MGT_URL=https://casemanage-backend.apps.sno.zagaopensource.com/api/v1/case/
+      # - CASE_MGT_URL=https://casemanage-backend.apps.sno.zagaopensource.com/api/v1/case/
+      - CASE_MGT_URL=https://casemanage-backend.apps.zagaopenshift.zagaopensource.com/api/v1/case/
       - OPENSHIFT_API_SERVER=https://<openshift api url>:6443
       - OPENSHIFT_TOKEN=<token>
       - ACTION_REQ=N

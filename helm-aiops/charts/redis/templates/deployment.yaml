@@ -20,7 +20,7 @@ spec:
             - containerPort: {{ .Values.service.port }}
           volumeMounts:
             - name: redis-data
-              mountPath: /data
+              mountPath: /tmp/data
       volumes:
         - name: redis-data
           emptyDir: {}
