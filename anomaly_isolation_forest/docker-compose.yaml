@@ -15,6 +15,7 @@ services:
       - PROCESS_ANOMALY_URL=http://fastapi-app:8001/process-anomaly
       - REDIS_OBS_HOST=redis
       - REDIS_OBS_PORT=6379
+      - DATABASE_URL=postgresql://anomaly:anomaly123$@anomaly-db:5432/anomaly-db
     volumes:
       - ${PWD}:/app
     depends_on:
@@ -32,6 +33,18 @@ services:
       - redis_data:/data
     networks:
         - anomaly-network
+  anomaly-db:
+    image: quay.io/osclimate/postgresql-13:1-101
+    container_name: anomaly-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRESQL_ADMIN_PASSWORD=admin123$
+      - POSTGRESQL_DATABASE=anomaly-db
+      - POSTGRESQL_PASSWORD=anomaly123$
+      - POSTGRESQL_USER=anomaly
+    networks:
+      - anomaly-network
   # redis-event:
   #   image: redis:7-alpine
   #   container_name: redis-event

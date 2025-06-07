@@ -1,14 +1,12 @@
-from fastapi import FastAPI,BackgroundTasks # type: ignore
-from app.schemas import AnomalyRequest, BulkAnomalyRequest
+from fastapi import FastAPI,BackgroundTasks , Depends,Query # type: ignore
 from app.model import load_model, predict_anomaly, predict_bulk_anomalies,train_anomaly_model
 from app.scripts.insert_redis_data import generate_random_data , insert_data_to_redis , insert_data_to_observability_event_redis ,generate_observability_event_data
 from redis import Redis # type: ignore
 import redis.asyncio as aioredis
 import random
 import joblib
+from typing import Optional
 
-
-# from fastapi_utils.tasks import repeat_every
 import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -21,17 +19,32 @@ from apscheduler.schedulers.background import BackgroundScheduler
 # import httpx
 from httpx import AsyncClient,Timeout, ReadTimeout
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from app.db import models, crud
+from app.db.schemas import AnomalyRequest, BulkAnomalyRequest
 
 import asyncio
+
+from sqlalchemy.orm import Session
+from app.db.db import SessionLocal, engine
 
 logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
 
 logger = logging.getLogger("apscheduler")
 
 
+models.Base.metadata.create_all(bind=engine)
+
+
 # Initialize FastAPI app
 app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 PROCESS_URL = os.environ["PROCESS_ANOMALY_URL"]
 MODEL_PATH = "models/isolation_forest_model.joblib"
@@ -64,10 +77,32 @@ subscriber_task = None
 # Connect to Redis
 redis_client = Redis(host=redis_host, port=redis_port, decode_responses=True)
 
-# observability_redis_client = Redis(host=redis_obs_host, port=redis_obs_port, decode_responses=True)
 
 scheduler = AsyncIOScheduler()
 
+
+@app.post("/persistAnomalies/")
+def insert_anomaly(anomaly: AnomalyRequest, db: Session = Depends(get_db)):
+    return crud.create_anomaly(db, anomaly)
+
+@app.get("/allAnomalies/")
+def list_anomalies(db: Session = Depends(get_db)):
+    return crud.get_all_anomalies(db)
+
+@app.get("/anomalies/")
+def list_anomalies(db: Session = Depends(get_db)):
+    return crud.get_all_anomalies_sorted(db)
+
+
+@app.get("/anomalies/date-range")
+def list_anomalies_between_dates(
+    start_date: datetime = Query(..., description="Start datetime (ISO format)"),
+    end_date: datetime = Query(..., description="End datetime (ISO format)"),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    return crud.get_anomalies_between_dates(db, start_date, end_date, skip, limit)
 
 
 @app.post("/train_model")
@@ -94,6 +129,28 @@ def start_training(background_tasks: BackgroundTasks):
 def get_training_status():
     return {"training": training_in_progress}
 
+@app.get("/anomalies/filter")
+def filter_anomalies(
+    start_date: datetime = Query(..., description="Start of date range"),
+    end_date: datetime = Query(..., description="End of date range"),
+    cluster_name: Optional[str] = None,
+    pod_name: Optional[str] = None,
+    app_name: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    return crud.get_anomalies_filtered(
+        db=db,
+        start_date=start_date,
+        end_date=end_date,
+        cluster_name=cluster_name,
+        pod_name=pod_name,
+        app_name=app_name,
+        skip=skip,
+        limit=limit
+    )
+
 
 # Health check endpoint
 @app.get("/")
@@ -114,6 +171,21 @@ async def predict_bulk(requests: BulkAnomalyRequest):
     logger.info(f"Bulk anomaly prediction processed for {len(results)} entries.")
     return {"results": results}
 
+def process_scheduled_anomaly(anomaly_data):
+    db = SessionLocal()
+    try:
+        crud.create_anomaly(db, anomaly_data)
+    finally:
+        db.close()
+def create_anomaly_from_dict(anomaly_dict: dict):
+    db = SessionLocal()
+    try:
+        anomaly = AnomalyRequest(**anomaly_dict)
+        return crud.create_anomaly(db, anomaly)
+    finally:
+        db.close()
+
+
 async def process_redis_data() -> None:
     anomaly_data = []
     # print(f"Periodic Task Triggered: {datetime.datetime.now()}")  # Add this line
@@ -131,6 +203,15 @@ async def process_redis_data() -> None:
         results = predict_bulk_anomalies(model, anomaly_data)
         logger.info(f"Processed {len(results)} entries from Redis.")
         logger.info(f"Processed {results} entries from Redis.")
+        
+        # Persist to db
+        for anomaly in anomaly_data:
+            # anomaly_dt= AnomalyRequest(**anomaly)
+            # insert_anomaly(anomaly_dt)
+            # process_scheduled_anomaly(anomaly)
+            create_anomaly_from_dict(anomaly)
+
+        
 
         default_values = {
             "anomaly_type": "Unknown",
@@ -138,6 +219,7 @@ async def process_redis_data() -> None:
             "resolution": "Pending"
         }
 
+        
         for res, entry in zip(results, anomaly_data):
             logger.info(f"Anomaly detected: {res['is_anomaly']} for pod {entry['pod_name']} at {entry['timestamp']}")
             
@@ -149,7 +231,8 @@ async def process_redis_data() -> None:
             # Merge default values
             for key, value in default_values.items():
                 res.setdefault(key, value)
-                    
+        
+
 
         if results:
             logger.info("entering into rpocess")
@@ -312,10 +395,16 @@ async def redis_subscriber():
                     
                     for single_event in events:
                         formatted = convert_to_anomaly_model_format(single_event)
-                        anomaly = json.dumps(formatted)
-                        redis_client.rpush("anomaly_queue", anomaly)
-                        print(f"Inserted anomaly record into Redis: {anomaly}")
-
+                        
+                        print(f" anomaly record from APM : {formatted}")
+                        
+                        if data["cpu_usage"] > 0 and data["memory_usage"] > 0:
+                            anomaly = json.dumps(formatted)
+                            redis_client.rpush("anomaly_queue", anomaly)
+                            print(f"Inserted anomaly record into Redis: {anomaly}")
+                        else:
+                            print(f" Anomaly detected , but its not an anomaly: {anomaly}")
+                       
 
                 except json.JSONDecodeError:
                     # logger.error("Failed to decode JSON from message: %s", message["data"])
