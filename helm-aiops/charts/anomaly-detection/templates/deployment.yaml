@@ -19,9 +19,12 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
           env:
-          {{- with .Values.env }}
-          {{- range $key, $value := . }}
-                      - name: {{ $key }}
-                        value: "{{ $value }}"
-          {{- end }}
-          {{- end }}
+            - name: DATABASE_URL
+              value: postgresql://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password | quote }}@{{ .Values.postgresql.serviceName }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}
+
+            {{- with .Values.env }}
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}

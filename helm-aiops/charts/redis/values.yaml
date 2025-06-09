@@ -9,7 +9,7 @@ persistence:
   enabled: true
   # storageClass: ""
   accessMode: ReadWriteOnce
-  size: 20Gi
+  size: 30Gi
 
 # auth:
 #   enabled: false

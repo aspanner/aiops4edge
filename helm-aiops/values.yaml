@@ -24,3 +24,14 @@ anomaly-llm:
 redis:
   service:
     port: 6379
+
+# postgresql:
+#   port: 5432
+#   storage: 20Gi
+#   user: anomaly
+#   password: anomaly123$
+#   adminPassword: anomaly123$
+#   database: anomalydb
+#   # serviceName: postgres-service
+#   pvcName: postgres-pvc
+#   image: quay.io/osclimate/postgresql-13:1-101

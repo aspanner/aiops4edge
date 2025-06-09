@@ -26,6 +26,7 @@ import asyncio
 
 from sqlalchemy.orm import Session
 from app.db.db import SessionLocal, engine
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
 
@@ -37,6 +38,14 @@ models.Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"],
+)
 
 def get_db():
     db = SessionLocal()

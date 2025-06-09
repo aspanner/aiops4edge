@@ -14,3 +14,13 @@ env:
   # OPENSHIFT_TOKEN: <token>
   # ACTION_REQ: N
   # CHANNEL_NAME: observability_channel
+postgresql:
+  port: 5432
+  storage: 20Gi
+  user: anomaly
+  password: anomaly123$
+  adminPassword: anomaly123$
+  database: anomalydb
+  serviceName: postgres-service
+  pvcName: postgres-pvc
+  image: quay.io/osclimate/postgresql-13:1-101
