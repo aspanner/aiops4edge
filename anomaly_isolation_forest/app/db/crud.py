@@ -4,7 +4,7 @@ from .schemas import AnomalyRequest
 import uuid
 from datetime import datetime
 from sqlalchemy import and_
-
+from typing import Optional
 
 
 def create_anomaly(db: Session, anomaly: AnomalyRequest):
@@ -35,7 +35,32 @@ def get_all_anomalies_sorted(db: Session, skip: int = 0, limit: int = 100):
         .all()
     )
 
-def get_anomalies_between_dates(
+def get_anomalies_filtered(
+    db: Session,
+    start_dt: datetime,
+    end_dt: Optional[datetime],
+    cluster_name: Optional[str],
+    pod_name: Optional[str],
+    app_name: Optional[str],
+    skip: int,
+    limit: int
+):
+    query = db.query(Anomaly).filter(Anomaly.timestamp >= start_dt)
+
+    if end_dt:
+        query = query.filter(Anomaly.timestamp <= end_dt)
+    if cluster_name:
+        query = query.filter(Anomaly.cluster_name == cluster_name)
+    if pod_name:
+        query = query.filter(Anomaly.pod_name == pod_name)
+    if app_name:
+        query = query.filter(Anomaly.app_name == app_name)
+
+    return query.offset(skip).limit(limit).all()
+
+
+
+def get_anomalies_dates_range(
     db: Session,
     start_date: datetime,
     end_date: datetime,

@@ -1,4 +1,4 @@
-from fastapi import FastAPI,BackgroundTasks , Depends,Query # type: ignore
+from fastapi import FastAPI,BackgroundTasks , Depends,Query ,HTTPException# type: ignore
 from app.model import load_model, predict_anomaly, predict_bulk_anomalies,train_anomaly_model
 from app.scripts.insert_redis_data import generate_random_data , insert_data_to_redis , insert_data_to_observability_event_redis ,generate_observability_event_data
 from redis import Redis # type: ignore
@@ -11,7 +11,7 @@ import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from contextlib import asynccontextmanager
 import json
 import logging
@@ -103,15 +103,55 @@ def list_anomalies(db: Session = Depends(get_db)):
     return crud.get_all_anomalies_sorted(db)
 
 
+# @app.get("/anomalies/date-range")
+# def list_anomalies_between_dates(
+#     start_date: datetime = Query(..., description="Start datetime (ISO format)"),
+#     end_date: datetime = Query(..., description="End datetime (ISO format)"),
+#     skip: int = 0,
+#     limit: int = 100,
+#     db: Session = Depends(get_db)
+# ):
+#     return crud.get_anomalies_between_dates(db, start_date, end_date, skip, limit)
+
 @app.get("/anomalies/date-range")
 def list_anomalies_between_dates(
-    start_date: datetime = Query(..., description="Start datetime (ISO format)"),
-    end_date: datetime = Query(..., description="End datetime (ISO format)"),
+    start_date: Optional[date] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
+    minutes: Optional[int] = Query(None, description="Window in minutes before now"),
+    cluster_name: Optional[str] = Query(None),
+    pod_name: Optional[str] = Query(None),
+    app_name: Optional[str] = Query(None),
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    return crud.get_anomalies_between_dates(db, start_date, end_date, skip, limit)
+    now = datetime.utcnow()
+
+    if start_date is not None and end_date is not None:
+        # Use full days for start and end date
+        start_dt = datetime.combine(start_date, time.min)
+        end_dt = datetime.combine(end_date, time.max)
+    elif minutes is not None:
+        # Ignore start_date and end_date, use now and now - minutes
+        start_dt = now - timedelta(minutes=minutes)
+        end_dt = now
+    else:
+        # Default behavior - no filters or some default range
+        start_dt = None
+        end_dt = None
+
+    print(f"Querying anomalies from {start_dt} to {end_dt}")
+
+    return crud.get_anomalies_filtered(
+        db=db,
+        start_date=start_dt,
+        end_date=end_dt,
+        cluster_name=cluster_name,
+        pod_name=pod_name,
+        app_name=app_name,
+        skip=skip,
+        limit=limit
+    )
 
 
 @app.post("/train_model")
