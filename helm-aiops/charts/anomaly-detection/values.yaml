@@ -18,7 +18,7 @@ postgresql:
   port: 5432
   storage: 20Gi
   user: anomaly
-  password: anomaly1234 # %24 means $
+  password: anomaly1234
   adminPassword: anomaly1234
   database: anomalydb
   serviceName: postgres-service
