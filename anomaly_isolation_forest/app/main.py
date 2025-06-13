@@ -394,15 +394,22 @@ def convert_to_anomaly_model_format(observability_event: dict) -> dict:
             return val.isoformat()
         return datetime.utcnow().isoformat()
 
+    # return {
+    #     "cluster_name": f"cluster_{random.randint(1, 10)}",  # Simulated/random cluster name
+    #     "pod_name": safe_get("servicename", "unknown-pod"),
+    #     "app_name": safe_get("servicename", "unknown-app"),  # same as pod
+    #     "cpu_usage": safe_float(safe_get("cpuusage")),
+    #     "memory_usage": safe_float(safe_get("memoryusage")),
+    #     "timestamp": safe_timestamp(safe_get("createdtime"))
+    # }
     return {
-        "cluster_name": f"cluster_{random.randint(1, 10)}",  # Simulated/random cluster name
-        "pod_name": safe_get("servicename", "unknown-pod"),
-        "app_name": safe_get("servicename", "unknown-app"),  # same as pod
-        "cpu_usage": safe_float(safe_get("cpuusage")),
-        "memory_usage": safe_float(safe_get("memoryusage")),
+        "cluster_name": safe_get("clusterName", "unknown-cluster"),  # Simulated/random cluster name
+        "pod_name": safe_get("serviceName", "unknown-pod"),
+        "app_name": safe_get("serviceName", "unknown-app"),  # same as pod
+        "cpu_usage": safe_float(safe_get("cpuUsage")),
+        "memory_usage": safe_float(safe_get("memoryUsage")),
         "timestamp": safe_timestamp(safe_get("createdtime"))
     }
-
 
 async def redis_subscriber():
     global redis_obs_client
