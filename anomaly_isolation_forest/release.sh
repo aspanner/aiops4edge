@@ -5,7 +5,7 @@ set -euo pipefail
 
 # Define your image base and version
 IMAGE=quay.io/zagaos/anomaly-isolation-forest
-VERSION=1.13
+VERSION=1.14
 
 # Default: versioned tag; also push latest
 TAG_VERSIONED=${IMAGE}:${VERSION}

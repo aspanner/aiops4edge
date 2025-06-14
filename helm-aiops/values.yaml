@@ -5,7 +5,7 @@ anomaly-detection:
     PROCESS_ANOMALY_URL: http://anomaly-llm.aiops.svc.cluster.local:8001/process-anomaly
     REDIS_HOST: redis.aiops.svc.cluster.local
     REDIS_PORT: 6379
-    CHANNEL_NAME: observability_channel
+    CHANNEL_NAME: observability-channel
     REDIS_OBS_HOST: redis-service.observability-datamesh.svc.cluster.local
     REDIS_OBS_PORT: 6379
 

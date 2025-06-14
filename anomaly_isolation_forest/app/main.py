@@ -383,7 +383,19 @@ def convert_to_anomaly_model_format(observability_event: dict) -> dict:
 
     def safe_float(val):
         try:
-            return round(float(val), 2)
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
+    # cpu_limit in cores
+    def convert_cpu_to_percent(val, cpu_limit=1.0):  
+        try:
+            return round((float(val) / cpu_limit) * 100, 2)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return 0.0
+
+    def convert_bytes_to_mb(val):
+        try:
+            return round(float(val) / (1024 ** 2), 2)
         except (TypeError, ValueError):
             return 0.0
 
@@ -394,22 +406,15 @@ def convert_to_anomaly_model_format(observability_event: dict) -> dict:
             return val.isoformat()
         return datetime.utcnow().isoformat()
 
-    # return {
-    #     "cluster_name": f"cluster_{random.randint(1, 10)}",  # Simulated/random cluster name
-    #     "pod_name": safe_get("servicename", "unknown-pod"),
-    #     "app_name": safe_get("servicename", "unknown-app"),  # same as pod
-    #     "cpu_usage": safe_float(safe_get("cpuusage")),
-    #     "memory_usage": safe_float(safe_get("memoryusage")),
-    #     "timestamp": safe_timestamp(safe_get("createdtime"))
-    # }
     return {
-        "cluster_name": safe_get("clusterName", "unknown-cluster"),  # Simulated/random cluster name
+        "cluster_name": safe_get("clusterName", "unknown-cluster"),
         "pod_name": safe_get("serviceName", "unknown-pod"),
-        "app_name": safe_get("serviceName", "unknown-app"),  # same as pod
-        "cpu_usage": safe_float(safe_get("cpuUsage")),
-        "memory_usage": safe_float(safe_get("memoryUsage")),
+        "app_name": safe_get("serviceName", "unknown-app"),
+        "cpu_usage": convert_cpu_to_percent(safe_get("cpuUsage"), cpu_limit=1.0),
+        "memory_usage": convert_bytes_to_mb(safe_get("memoryUsage")),
         "timestamp": safe_timestamp(safe_get("createdtime"))
     }
+
 
 async def redis_subscriber():
     global redis_obs_client
@@ -440,7 +445,7 @@ async def redis_subscriber():
 
                     # Handle both single dict and list of dicts
                     events = event if isinstance(event, list) else [event]
-
+                    print(f"Received message dictionary: {events}")
                     # following code commented out to incorporate APM events
                     # formatted =   convert_to_anomaly_model_format(event)
                     # anomaly = json.dumps(formatted)
