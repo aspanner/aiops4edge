@@ -5,10 +5,16 @@ import uuid
 import logging
 import json
 
+logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
+
+logger = logging.getLogger("ocp-scalar")
+
+logger = logging.getLogger(__name__)
+
+
 
 client.configuration.logger = logging.getLogger("kubernetes")
 client.configuration.logger.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG)
 
 
 def scale_pod1(namespace, deployment_name, replicas):
@@ -54,9 +60,13 @@ def scale_pod1(namespace, deployment_name, replicas):
 
 def create_case(notes,anomaly_data):
     print("create case")
+    logger.info(" starting create case")
     random_id = str(uuid.uuid4())
     print(random_id)
+    logger.info(f"case id {random_id}")
     url = os.getenv("CASE_MGT_URL")
+    logger.info(f"case url {url}")
+
     print(url)
 
     app_name = anomaly_data.get("app_name", "unknown_app")
@@ -82,6 +92,8 @@ def create_case(notes,anomaly_data):
     
     try :
         response = requests.post(url, json=data, headers=headers,verify=False)
+        logger.info(f"case response {response}")
+
     except requests.exceptions.Timeout:
         logging.error(f"Timeout calling {url} for {data}")
     except requests.exceptions.HTTPError as err:
@@ -90,7 +102,11 @@ def create_case(notes,anomaly_data):
         logging.error(f"Unexpected error calling {url}: {e}")
 
     print("Status Code:", response.status_code)
+    logger.info(f"Status Code {response.status_code}")
+
     print("Response:", response.json())
+    logger.info(f"case Response {response.json()}")
+
 
 def scale_pod(namespace, deployment_name, replicas):
 

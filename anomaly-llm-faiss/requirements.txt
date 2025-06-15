@@ -12,4 +12,7 @@ python-dotenv
 tiktoken
 #email-validator
 openai
-kubernetes
+psutil
+py-spy
+ipython
+httpx

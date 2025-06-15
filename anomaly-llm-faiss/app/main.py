@@ -6,9 +6,11 @@ from datetime import datetime
 import os
 from typing import Dict
 
-import logging
 import asyncio
 import json
+import psutil, os
+from app.services.consumer import consume_anomalies
+import logging
 
 
 app = FastAPI()
@@ -16,14 +18,30 @@ app = FastAPI()
 
 logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
 
-logger = logging.getLogger("apscheduler")
+logger = logging.getLogger("main")
 
 logger = logging.getLogger(__name__)
 
 
-app.on_event("startup")
+@app.on_event("startup")
 async def startup_event():
+    print("started vector store")
+    logger.info("Started vector store")
     get_vector_store()
+    process = psutil.Process(os.getpid())
+    print(f"Memory used after startup: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+    logger.info(f"Memory used after startup: {process.memory_info().rss / 1024 ** 2:.2f} MB")
+    print("completed vector store")
+    
+    
+    print("Starting  consumer...")
+    logger.info("Starting  consumer")
+    asyncio.create_task(consume_anomalies())
+    logger.info("Starting  consumer")
+
+    print("complete  consumer")
+
+
 
 @app.get("/health")
 def health_check():
@@ -31,7 +49,7 @@ def health_check():
 
 @app.get("/")
 async def root():
-    return {"message": "Anomaly Detection Service is running"}
+    return {"message": "LLM Service is running"}
 @app.post("/process-anomaly")
 async def process_anomaly(anomaly_data: dict ):
     try:

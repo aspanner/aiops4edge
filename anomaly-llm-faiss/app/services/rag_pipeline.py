@@ -23,6 +23,16 @@ os.environ["TRANSFORMERS_CACHE"] = "/tmp/huggingface/transformers"
 
 import numpy as np
 
+import logging
+
+
+logging.basicConfig(level=logging.DEBUG)  # Change INFO to DEBUG
+
+logger = logging.getLogger("pipeline")
+
+logger = logging.getLogger(__name__)
+
+
 # Load local embedding model
 # embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -46,7 +56,9 @@ vector_store = None  # Placeholder for lazy initialization
 
 def get_vector_store():
    
+   
     global vector_store
+    logger.info("Initializing  vector ")
     if vector_store is None:
 
         documents = [
@@ -55,38 +67,20 @@ def get_vector_store():
             Document(page_content="network_latency", metadata={"anomaly": "Intermittent connectivity issues observed between services.", "resolution": "Verify network policies and firewall rules in OpenShift. Investigate DNS resolution delays using tools like 'nslookup' and ensure services are properly registered in the service mesh."}),
             Document(page_content="disk_pressure", metadata={"anomaly": "Free up disk space by clearing logs or unnecessary files. Monitor disk usage metrics and consider increasing storage allocation in the PersistentVolumeClaim (PVC). Optimize I/O-intensive applications to minimize disk write frequency."}),
         ]
-        # code refactoring begin 
-       
-        # Embed the documents
-        # doc_texts = [doc.page_content for doc in documents]
-        # # embeddings = embedding_model.encode(doc_texts, convert_to_tensor=False)
-        # embeddings = embedding_model.encode(doc_texts, convert_to_tensor=False, show_progress_bar=False)
-
-
-        # # Initialize FAISS index
-        # dimension = len(embeddings[0])
-        # index = faiss.IndexFlatL2(dimension)
-        # index.add(np.array(embeddings).astype('float32'))
-
-        # # Initialize FAISS vector store using LangChain
-        # docstore = InMemoryDocstore(dict(enumerate(documents)))
-        # vector_store = FAISS(
-        #     embedding_function=lambda text: embedding_model.encode([text])[0],
-        #     index=index,
-        #     docstore=docstore,
-        #     index_to_docstore_id={i: i for i in range(len(documents))}
-        # )
-        # code refactor end
+        
         #new start code 
         # Create FAISS vector store
         vector_store = FAISS.from_documents(documents, embedding_model)
-        
+        logger.info("FAISS Initializing  vector completed ")
+
         #new end code  
     return vector_store
 
 
 def analyze_anomaly_with_llm(anomaly_data):
    
+    logger.info("started  analyze_anomaly_with_llm ")
+
     vector_store = get_vector_store()
 
     if not vector_store:
@@ -118,5 +112,9 @@ def analyze_anomaly_with_llm(anomaly_data):
     except Exception as e:
         print(f"Error in LLM pipeline: {e}")
         generated_text = "Failed to generate a response."
+        logger.debug(f"{generated_text} ")
+
     print(f"{generated_text} Additionally, consider scaling resources if usage remains high.")
+    logger.info(f"{generated_text} Additionally, consider scaling resources if usage remains high.")
+
     return f"{generated_text} Additionally, consider scaling resources if usage remains high."
