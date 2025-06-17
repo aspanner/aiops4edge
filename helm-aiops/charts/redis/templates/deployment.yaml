@@ -18,6 +18,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.port }}
+          args: [
+            "--save", "", 
+            "--appendonly", "no", 
+            "--maxmemory", "100mb", 
+            "--maxmemory-policy", "allkeys-lru"
+    ]
           volumeMounts:
             - name: redis-data
               mountPath: /tmp/data

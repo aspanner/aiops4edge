@@ -13,8 +13,13 @@ anomaly-llm:
   service:
     port: 8001
   env:
-    # CASE_MGT_URL: https://casemanage-dashboard.apps.sno.zagaopensource.com
-    CASE_MGT_URL: http://casemgt-backend-api.observability-casemanagement.svc.cluster.local:8000/api/v1/case/
+    # SNO server
+    CASE_MGT_URL: http://casemgt-backend-api.observability-zaga.svc.cluster.local:8000/api/v1/case/
+    # CASE_MGT_URL: http://casemgt-backend-api.observability-casemanagement.svc.cluster.local:8000/api/v1/case/
+    LLM_INFERENCE_QUEUE: llm_inference_queue
+    REDIS_HOST: redis.aiops.svc.cluster.local
+    REDIS_PORT: 6379
+    REDIS_DB: 0
     ACTION_REQ: N
     OPENSHIFT_API_SERVER: https://<openshift api url>:6443
     OPENSHIFT_TOKEN: <token>

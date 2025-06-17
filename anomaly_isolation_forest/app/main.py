@@ -283,17 +283,26 @@ async def process_redis_data() -> None:
         
 
 
-        if results:
-            logger.info("entering into rpocess")
-            tasks = [call_anomaly_api(data) for data in results]
+        # if results:
+        #     logger.info("entering into rpocess")
+        #     tasks = [call_anomaly_api(data) for data in results]
 
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
+        #     responses = await asyncio.gather(*tasks, return_exceptions=True)
             
-            for inp, out in zip(results, responses):
-                if isinstance(out, Exception):
-                    logger.error("Error for %s: %s", inp, out)
-                else:
-                    logger.info("Success for %s: %s", inp, out)
+        #     for inp, out in zip(results, responses):
+        #         if isinstance(out, Exception):
+        #             logger.error("Error for %s: %s", inp, out)
+        #         else:
+        #             logger.info("Success for %s: %s", inp, out)
+        if results:
+            logger.info("Publishing anomaly data to Redis queue")
+            for data in results:
+                try:
+                    redis_client.rpush("llm_inference_queue", json.dumps(data))
+                    logger.info("Pushed to Redis queue: %s", data)
+                except Exception as e:
+                    logger.error("Redis push failed for %s: %s", data, e)
+
 
 
     else:
@@ -459,12 +468,14 @@ async def redis_subscriber():
                         
                         print(f" anomaly record from APM : {formatted}")
                         
-                        if data["cpu_usage"] > 0 and data["memory_usage"] > 0:
+                        # if data["cpu_usage"] > 0 and data["memory_usage"] > 0:
+                        if formatted["cpu_usage"] > 0 and formatted["memory_usage"] > 0:
+
                             anomaly = json.dumps(formatted)
                             redis_client.rpush("anomaly_queue", anomaly)
                             print(f"Inserted anomaly record into Redis: {anomaly}")
                         else:
-                            print(f" Anomaly detected , but its not an anomaly: {anomaly}")
+                            print(f" Anomaly detected , but its not an anomaly: {formatted}")
                        
 
                 except json.JSONDecodeError:
