@@ -91,6 +91,9 @@ def predict_bulk_anomalies(model, requests):
     for req, pred in zip(requests, predictions):
         # result = "Anomaly" if pred == -1 else "Normal"
         if pred == -1:  # Only add anomalies
+            
+            anomaly_type = classify_anomaly_type(req["cpu_usage"], req["memory_usage"])
+
             results.append({
                 "cluster_name": req["cluster_name"],
                 "pod_name": req["pod_name"],
@@ -98,6 +101,20 @@ def predict_bulk_anomalies(model, requests):
                 "timestamp": req["timestamp"],
                 "cpu_usage": req["cpu_usage"],
                 "memory_usage": req["memory_usage"],
-                "is_anomaly": "Anomaly"
+                "is_anomaly": "Anomaly",
+                "anomaly_type": anomaly_type
+                
             })
     return results
+def classify_anomaly_type(cpu, mem, cpu_thresh=75, mem_thresh=3500):
+    high_cpu = cpu > cpu_thresh
+    high_mem = mem > mem_thresh
+
+    if high_cpu and high_mem:
+        return "high_cpu_and_memory"
+    elif high_cpu:
+        return "high_cpu_usage"
+    elif high_mem:
+        return "memory_leak"
+    else:
+        return "high_cpu_usage"

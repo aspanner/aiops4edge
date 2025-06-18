@@ -5,7 +5,7 @@ set -euo pipefail
 
 # Define your image base and version
 IMAGE=quay.io/zagaos/anomaly-llm-gpt2
-VERSION=1.18
+VERSION=1.19
 
 # Default: versioned tag; also push latest
 TAG_VERSIONED=${IMAGE}:${VERSION}

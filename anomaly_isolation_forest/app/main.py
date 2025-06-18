@@ -274,7 +274,7 @@ async def process_redis_data() -> None:
             
             # Ensure `timestamp` exists and is a string
             res["timestamp"] = entry.get("timestamp", datetime.utcnow().isoformat())  # Convert to ISO string
-            res["anomaly_type"] = "high_cpu_usage" if res["is_anomaly"] == "Anomaly" else "Normal"
+            # res["anomaly_type"] = "high_cpu_usage" if res["is_anomaly"] == "Anomaly" else "Normal"
             logger.info(f"Anomaly detected-->: {res['anomaly_type'] }")
 
             # Merge default values
@@ -299,6 +299,7 @@ async def process_redis_data() -> None:
             for data in results:
                 try:
                     redis_client.rpush("llm_inference_queue", json.dumps(data))
+                    redis_client.publish("anomaly_catalog_topic", json.dumps(data))
                     logger.info("Pushed to Redis queue: %s", data)
                 except Exception as e:
                     logger.error("Redis push failed for %s: %s", data, e)
