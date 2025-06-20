@@ -5,8 +5,9 @@ from datetime import datetime
 
 def transform_to_anomaly_format(observability_event):
     return {
-        "cluster_name": f"cluster_{random.randint(1, 10)}",
-        "pod_name": observability_event["servicename"],
+        # "cluster_name": f"cluster_{random.randint(1, 10)}",
+        "cluster_name": observability_event.get("clusterName") or f"cluster_{random.randint(1, 10)}",
+        "pod_name": observability_event["podName"],
         "app_name": observability_event["servicename"],  # or derive differently if needed
         "cpu_usage": round(float(observability_event["cpuusage"]), 2),
         "memory_usage": round(float(observability_event["memoryusage"]), 2),

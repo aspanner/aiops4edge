@@ -418,7 +418,7 @@ def convert_to_anomaly_model_format(observability_event: dict) -> dict:
 
     return {
         "cluster_name": safe_get("clusterName", "unknown-cluster"),
-        "pod_name": safe_get("serviceName", "unknown-pod"),
+        "pod_name": safe_get("podName", "unknown-pod"),
         "app_name": safe_get("serviceName", "unknown-app"),
         "cpu_usage": convert_cpu_to_percent(safe_get("cpuUsage"), cpu_limit=1.0),
         "memory_usage": convert_bytes_to_mb(safe_get("memoryUsage")),
